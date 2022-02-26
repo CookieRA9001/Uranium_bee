@@ -1,3 +1,7 @@
+-- TO DO
+-- Update tooltips for brewer and flasks
+-- test if mc is working well
+
 -- BEES!
 -- uranium bee data
 uranium_bee = {
@@ -482,7 +486,7 @@ function register()
 end
 
 function init()
-  api_set_devmode(true)
+  --api_set_devmode(true)
   api_create_log("Uranium Bee", "Init starting!")
 
   -- sprites
@@ -684,7 +688,7 @@ function gui()
       local cam = api_get_camera_position()
       local mouse = api_get_mouse_position()
       -- draw text at mouse position
-      api_draw_text(mouse["x"]-cam["x"], mouse["y"]-cam["y"], hs_stats["info"], true, color)
+      api_draw_text(mouse["x"]-cam["x"], mouse["y"]-cam["y"], hs_stats["info"], true, color, 100)
     end
   end
 end
@@ -775,12 +779,12 @@ QUESTS[4] = {
   page1 = {
     {text = "Each element effects a difrent trait."},
     {gif = "q4-1", height = 46},
-    {text = "A concoction can hold a lot of elements, but if their is more then 12 elements, the concoction will become unstable! A normal mutation can change a trait by 1 level, but an unstable concoction can change it by 2."},
+    {text = "A concoction can hold a lot of elements, but if their is more then 9 elements in total, the concoction will become unstable! A normal mutation can change a trait by 1 level, but an unstable concoction can change it by 2."},
     {text = "Elements that stop a trait from changing, are not effected by the unstability.", color = "BEE_GLITCHED"},
   },
   page2 = {
     {gif = "q4-2", height = 46},
-    {text = "Make a Flask of an Unstable Concoction."},
+    {text = "Make a Flask of an Unstable Concoction wiht 9+ total elements."},
     {text = "Hint: Use ingredients with 2+ elements and a bee with 3 elements (like the Muggy Bee)", color = "BEE_COMMON"}
   }
 }
@@ -861,7 +865,7 @@ end
 
 function mc_tick(menu_id)
   if api_gp(menu_id, "working") == true then
-    api_sp(menu_id,"p_start", api_gp(menu_id,"p_start") + 0.005)
+    api_sp(menu_id,"p_start", api_gp(menu_id,"p_start") + 0.007)
     if api_gp(menu_id, "p_start") >= api_gp(menu_id, "p_end") then
       api_sp(menu_id, "p_start", 0)
       local input_s1 = api_slot_match_range(menu_id, {"ANY"}, {1},true)
@@ -1042,8 +1046,8 @@ function mc_draw(menu_id)
   local gx = gui["x"] - cam["x"]
   local gy = gui["y"] - cam["y"]
   if api_gp(menu_id, "working") == true then
-    local progress = (api_gp(menu_id, "p_start") / api_gp(menu_id, "p_end") * 16)
-    api_draw_sprite_part(spr, 2, 0, 0, 16, progress, gx, gy+16-progress)
+    local progress = (api_gp(menu_id, "p_start") / api_gp(menu_id, "p_end") * 9)
+    api_draw_sprite_part(spr, 2, 0, 0, 16, progress, gx, gy+12-progress)
   end
   api_draw_sprite(spr, 1, gx, gy)
 
@@ -1116,11 +1120,11 @@ function fb_tick(menu_id)
       if inputs[5]["item"]~="" and inputs[6]["item"]~="" and ((inputs[1]["item"]~="" or inputs[2]["item"]~="") or (inputs[3]["item"]~="" or inputs[4]["item"]~="")) then -- is input is still valid?
         -- make glabal value of ingrediants to elements and elements to traits
         -- make glabal value of bee to element
-        -- output a full flask in output slot with stats of the elements: if elements count exides 12 - unstable concoctions
+        -- output a full flask in output slot with stats of the elements: if elements count exides 9 - unstable concoctions
         local output_slot = api_slot_match_range(menu_id, {""}, {7, 8, 9, 10}, true)
         if output_slot~=nil then 
           local stats_new = fb_elements({inputs[1],inputs[2],inputs[3],inputs[4]},inputs[6])
-          if stats_new["count"]>=12 then api_slot_set(output_slot["id"], "uranium_bee_flask_unstable", 0, stats_new)
+          if stats_new["count"]>=9 then api_slot_set(output_slot["id"], "uranium_bee_flask_unstable", 0, stats_new)
           else api_slot_set(output_slot["id"], "uranium_bee_flask_full", 0, stats_new) end
         end
         --clear input
@@ -1157,17 +1161,16 @@ end
 -- progress bar tool tip : used by flask brewer
 function fb_progrss_bar_tooltip(menu_id) 
   local progress = math.floor((api_gp(menu_id, "p_start") / api_gp(menu_id, "p_end")) * 100)
-  local percent = tostring(progress) .. "%\n"
   -- add elements
   local el_string = api_gp(menu_id, "el_string")
   if el_string=="" then -- elements need recounting
     local el = fb_elements(api_slot_match_range(menu_id, {"ANY"}, {1,2,3,4},false),api_slot_match_range(menu_id, {"bee"}, {6},true))
     el_string = el["info"]
   end
-  percent = percent..el_string
   return {
     {"Progress", "FONT_WHITE"},
-    {percent, "FONT_BGREY"}
+    {tostring(progress).."%","FONT_WHITE"},
+    {el_string, "FONT_BGREY"}
   }
 end
 -- make element information
@@ -1233,12 +1236,12 @@ function fb_elements( input_4_slots , bee_slot)
     end
   end
   -- makes a string with all the elements in the given array (not perfect, i know)
-  local element_string = "Elements:\n"
+  local element_string = " Elements:"
   local c = 0
   for i=1, loem_count do
     if elements[list_of_element_names[i]]~=0 then
       c = c + elements[list_of_element_names[i]]
-      element_string = element_string..list_of_element_names[i].." "..tostring(elements[list_of_element_names[i]]).."\n"
+      element_string = element_string.."|"..list_of_element_names[i].." "..tostring(elements[list_of_element_names[i]])
     end
     if c == elements["count"] then
       i = loem_count
@@ -1251,20 +1254,20 @@ end
 -- computer/PC functions
 function pc_define(menu_id)
   shop = {
-    {item="bee", price=3, stats=api_create_bee_stats("common", false), sprite=api_get_sprite("sp_bee_common")},
-    {item="uranium_bee_flask", price=3, amount=12, sprite=api_get_sprite("sp_uranium_bee_flask")},
-    {item="uranium_bee_flask_brewer", price=2, amount=1, sprite=api_get_sprite("sp_uranium_bee_flask_brewer")},
+    {item="bee", price=15, stats=api_create_bee_stats("common", false), sprite=api_get_sprite("sp_bee_common")},
+    {item="uranium_bee_flask", price=10, amount=12, sprite=api_get_sprite("sp_uranium_bee_flask")},
+    {item="uranium_bee_flask_brewer", price=5, amount=1, sprite=api_get_sprite("sp_uranium_bee_flask_brewer")},
     {item="uranium_bee_floaty",price=1, amount=1, sprite=api_get_sprite("sp_uranium_bee_floaty")},
-    {item="log", price=1, amount=10, sprite=api_get_sprite("sp_log")},
+    {item="log", price=9, amount=10, sprite=api_get_sprite("sp_log")},
     {item="uranium_bee_computer_shop", price=999, amount=1, sprite=api_get_sprite("sp_uranium_bee_computer_shop")}
   }
   shop_black = {
-    {item="bee", price=7, stats=api_create_bee_stats("uranium", false), sprite=api_get_sprite("sp_bee_uranium")},
-    {item="uranium_bee_metal_ingot", price=2, amount=1, sprite=api_get_sprite("sp_uranium_bee_metal_ingot")},
-    {item="uranium_bee_plutonium_wax", price=4, amount=1, sprite=api_get_sprite("sp_uranium_bee_plutonium_wax")},
-    {item="uranium_bee_mutation_chamber", price=50, amount=1, sprite=api_get_sprite("sp_uranium_bee_mutation_chamber")},
-    {item="royaljelly", price=5, amount=12, sprite=api_get_sprite("sp_royaljelly")},
-    {item="uranium_bee_hammerPC", price=100, amount=1, sprite=api_get_sprite("sp_uranium_bee_hammerPC")}
+    {item="bee", price=25, stats=api_create_bee_stats("uranium", false), sprite=api_get_sprite("sp_bee_uranium")},
+    {item="uranium_bee_metal_ingot", price=5, amount=1, sprite=api_get_sprite("sp_uranium_bee_metal_ingot")},
+    {item="uranium_bee_plutonium_wax", price=20, amount=1, sprite=api_get_sprite("sp_uranium_bee_plutonium_wax")},
+    {item="uranium_bee_mutation_chamber", price=80, amount=1, sprite=api_get_sprite("sp_uranium_bee_mutation_chamber")},
+    {item="royaljelly", price=30, amount=12, sprite=api_get_sprite("sp_royaljelly")},
+    {item="uranium_bee_hammerPC", price=300, amount=1, sprite=api_get_sprite("sp_uranium_bee_hammerPC")}
   }
   -- the nocturnal common bee
   shop[1]["stats"]["d_traits"]["behaviour"]="Nocturnal"
@@ -1394,12 +1397,12 @@ function pc_btn_bank(menu_id) change_pc_tab(menu_id, 3, false) end
 function pc_btn_beenet(menu_id) change_pc_tab(menu_id, 4, false) end
 
 -- buy button functions :)
-function buy_item_1(menu_id) buy_coins(menu_id, 1,99,false) end
-function buy_item_2(menu_id) buy_coins(menu_id, 6,499,false) end
-function buy_item_3(menu_id) buy_coins(menu_id, 129,9999,false) end
-function buy_item_4(menu_id) buy_coins(menu_id, 5,9,true) end
-function buy_item_5(menu_id) buy_coins(menu_id, 46,79,true) end
-function buy_item_6(menu_id) buy_coins(menu_id, 179,259,true) end
+function buy_item_1(menu_id) buy_coins(menu_id, 1,19,false) end
+function buy_item_2(menu_id) buy_coins(menu_id, 6,99,false) end
+function buy_item_3(menu_id) buy_coins(menu_id, 129,1999,false) end
+function buy_item_4(menu_id) buy_coins(menu_id, 3,1,true) end
+function buy_item_5(menu_id) buy_coins(menu_id, 159,49,true) end
+function buy_item_6(menu_id) buy_coins(menu_id, 899,259,true) end
 
 --buy beecoin
 function buy_coins(menu_id, amount, price, isHoneycore) 
